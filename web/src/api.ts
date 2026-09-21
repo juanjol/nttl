@@ -1,5 +1,6 @@
 import type {
   CameraOption,
+  FontOption,
   DarkEntryView,
   JobInfo,
   LogEntry,
@@ -65,6 +66,7 @@ export const api = {
   logs: (after = 0) => request<{ entries: LogEntry[] }>(`/api/logs?after=${after}`),
   clearLogs: () => request<unknown>("/api/logs", { method: "DELETE" }),
   overlayPresets: () => request<{ presets: OverlayPreset[] }>("/api/overlay/presets"),
+  overlayFonts: () => request<{ fonts: FontOption[] }>("/api/overlay/fonts"),
   sessions: () => request<{ sessions: SessionEntry[] }>("/api/sessions"),
   compile: (session: string, video?: Record<string, unknown>) =>
     request<JobInfo>("/api/compile", {

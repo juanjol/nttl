@@ -6,8 +6,8 @@ from nttl.hal import BayerPattern, FrameMetadata, Roi
 from nttl.imaging.overlay import OverlayConfig, OverlayItem, Position, render_overlay, render_tokens
 
 
-def metadata() -> FrameMetadata:
-    return FrameMetadata(
+def metadata(**overrides) -> FrameMetadata:
+    fields = dict(
         timestamp_utc=datetime(2026, 9, 21, 22, 30, 15, tzinfo=UTC),
         exposure_s=12.5,
         gain=220,
@@ -20,6 +20,8 @@ def metadata() -> FrameMetadata:
         camera_name="ASI294MC Pro",
         bit_depth=16,
     )
+    fields.update(overrides)
+    return FrameMetadata(**fields)
 
 
 def test_render_tokens_replaces_known_fields():
@@ -72,3 +74,9 @@ def test_render_overlay_positions_are_independent():
     )
     assert top[:60].max() > 0 and top[60:].max() == 0
     assert bottom[60:].max() > 0 and bottom[:60].max() == 0
+
+
+def test_numeric_tokens_accept_a_format_spec():
+    assert render_tokens("{gain:.0f}", metadata(gain=362.059991)) == "362"
+    assert render_tokens("{gain}", metadata(gain=362.059991)) == "362.059991"
+    assert render_tokens("{exp:.2f}s", metadata(exposure_s=1.5)) == "1.50s"

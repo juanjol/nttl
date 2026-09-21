@@ -56,6 +56,11 @@ def test_overlay_presets_are_offered(client):
     assert presets["standard"][0]["template"]
 
 
+def test_fonts_are_offered_for_the_overlay(client):
+    fonts = client.get("/api/overlay/fonts").json()["fonts"]
+    assert all({"name", "path"} == set(entry) for entry in fonts)
+
+
 def test_logs_are_readable(client):
     client.post("/api/live/start")
     entries = client.get("/api/logs").json()["entries"]

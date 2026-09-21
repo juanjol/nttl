@@ -117,6 +117,11 @@ export interface LogEntry {
   message: string;
 }
 
+export interface FontOption {
+  name: string;
+  path: string;
+}
+
 export interface OverlayPreset {
   name: string;
   items: Record<string, unknown>[];

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from nttl import __version__
 from nttl.hal.errors import CameraError, ControlNotSupportedError
 from nttl.hal.registry import available_backends, list_cameras
+from nttl.imaging.fonts import available_fonts
 from nttl.imaging.overlay import preset_items, preset_names
 from nttl.logs import memory_handler
 from nttl.server.state import AppState
@@ -243,6 +244,11 @@ def overlay_presets() -> dict[str, Any]:
             for name in preset_names()
         ]
     }
+
+
+@router.get("/overlay/fonts")
+def overlay_fonts() -> dict[str, Any]:
+    return {"fonts": [dict(entry) for entry in available_fonts()]}
 
 
 @router.post("/compile")

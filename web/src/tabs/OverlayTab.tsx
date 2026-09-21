@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { Button, NumberInput, Row, Section, Select, TextInput, Toggle } from "../components/controls";
-import type { OverlayPreset } from "../types";
+import type { FontOption, OverlayPreset } from "../types";
 import { bool, list, num, str, type TabProps } from "./common";
 
 function templateOf(item: { template?: unknown }): string {
@@ -61,6 +61,8 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
   const path = ["capture", "output", "overlay"];
   const items = list<OverlayItem>(config, [...path, "items"]);
   const [presets, setPresets] = useState<OverlayPreset[]>([]);
+  const [fonts, setFonts] = useState<FontOption[]>([]);
+  const fontPath = str(config, [...path, "font_path"]);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,10 +70,23 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
       .overlayPresets()
       .then((body) => !cancelled && setPresets(body.presets))
       .catch(() => undefined);
+    api
+      .overlayFonts()
+      .then((body) => !cancelled && setFonts(body.fonts))
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const fontOptions = [
+    { value: "", label: "Default sans serif" },
+    ...fonts.map((font) => ({ value: font.path, label: font.name })),
+  ];
+  // A font saved on another machine may not exist here.
+  if (fontPath && !fonts.some((font) => font.path === fontPath)) {
+    fontOptions.push({ value: fontPath, label: `${fontPath} (not installed)` });
+  }
 
   const matching = presets.find(
     (preset) => JSON.stringify(preset.items.map(templateOf)) === JSON.stringify(items.map(templateOf)),
@@ -107,14 +122,13 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
             </div>
           </Row>
         )}
-        {expert && (
-          <Row label="Font file" expert hint="Leave empty to use the bundled sans serif">
-            <TextInput
-              value={str(config, [...path, "font_path"])}
-              onChange={(value) => update([...path, "font_path"], value.length ? value : null)}
-            />
-          </Row>
-        )}
+        <Row label="Font" hint="Every font installed on this machine">
+          <Select
+            value={fontPath}
+            options={fontOptions}
+            onChange={(value) => update([...path, "font_path"], value.length ? value : null)}
+          />
+        </Row>
       </Section>
 
       <Section title="Template">

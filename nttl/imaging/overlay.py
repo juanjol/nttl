@@ -47,7 +47,7 @@ def _preset_items() -> dict[str, list[OverlayItem]]:
                 background="#000000",
             ),
             OverlayItem(
-                template="{exp}s  gain {gain}",
+                template="{exp}s  gain {gain:.0f}",
                 position=Position.BOTTOM_RIGHT,
                 font_size=18,
                 background="#000000",
@@ -73,7 +73,7 @@ def _preset_items() -> dict[str, list[OverlayItem]]:
                 background="#000000",
             ),
             OverlayItem(
-                template="{exp}s  gain {gain}  {sensor_temp:+.1f}C",
+                template="{exp}s  gain {gain:.0f}  {sensor_temp:+.1f}C",
                 position=Position.BOTTOM_RIGHT,
                 font_size=18,
                 background="#000000",
@@ -122,9 +122,9 @@ def _tokens(metadata: FrameMetadata, extra: dict[str, Any] | None) -> _SafeToken
         datetime=local.strftime("%Y-%m-%d %H:%M:%S"),
         date_utc=metadata.timestamp_utc.strftime("%Y-%m-%d"),
         time_utc=metadata.timestamp_utc.strftime("%H:%M:%S"),
-        exp=_trim(metadata.exposure_s),
-        gain=_trim(metadata.gain),
-        offset=_trim(metadata.offset),
+        exp=_Number(metadata.exposure_s),
+        gain=_Number(metadata.gain),
+        offset=_Number(metadata.offset),
         sensor_temp=_Temp(metadata.sensor_temp_c),
         seq=metadata.sequence,
         camera=metadata.camera_name,
@@ -140,6 +140,13 @@ def _tokens(metadata: FrameMetadata, extra: dict[str, Any] | None) -> _SafeToken
 class _Temp(float):
     def __format__(self, spec: str) -> str:
         return format(float(self), spec or ".1f")
+
+
+class _Number(float):
+    """A token that reads well on its own and still accepts a format spec."""
+
+    def __format__(self, spec: str) -> str:
+        return format(float(self), spec) if spec else _trim(self)
 
 
 def _trim(value: float) -> str:
