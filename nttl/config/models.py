@@ -5,9 +5,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
 
+from nttl.darks.library import DarkMatchConfig
 from nttl.imaging.overlay import OverlayConfig
 from nttl.imaging.stretch import StretchConfig
 from nttl.imaging.writers import ImageFormat
+from nttl.scheduler.windows import ScheduleConfig
+from nttl.video.ffmpeg import VideoConfig
 
 
 class Priority(StrEnum):
@@ -81,3 +84,21 @@ class CaptureConfig(BaseModel):
         if self.frame_count is not None and self.duration_s is not None:
             raise ValueError("set either frame_count or duration_s, not both")
         return self
+
+
+class WebConfig(BaseModel):
+    host: str = "127.0.0.1"
+    port: int = Field(default=8765, ge=1, le=65535)
+    open_browser: bool = False
+
+
+class AppConfig(BaseModel):
+    capture: CaptureConfig = Field(default_factory=CaptureConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+    video: VideoConfig = Field(default_factory=VideoConfig)
+    darks: DarkMatchConfig = Field(default_factory=DarkMatchConfig)
+    web: WebConfig = Field(default_factory=WebConfig)
+    darks_directory: Path = Path("darks")
+    ffmpeg_path: str | None = None
+    preview_max_width: int = Field(default=1280, ge=160, le=8192)
+    preview_interval_s: float = Field(default=1.0, ge=0.0, le=60.0)
