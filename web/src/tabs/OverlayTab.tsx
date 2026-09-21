@@ -95,7 +95,7 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
           <Row label="Margin and line spacing" expert>
             <div className="flex gap-2">
               <NumberInput
-                value={num(config, [...path, "margin"], 8)}
+                value={num(config, [...path, "margin"], 12)}
                 min={0}
                 onChange={(value) => update([...path, "margin"], value)}
               />
@@ -118,6 +118,21 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
       </Section>
 
       <Section title="Template">
+        {bool(config, [...path, "enabled"], true) && items.length === 0 && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5">
+            <p className="text-xs text-amber-200">
+              The overlay is on but has no text, so nothing is drawn on the frames.
+            </p>
+            <Button
+              onClick={() => {
+                const preset = presets.find((entry) => entry.name === "standard");
+                if (preset) setItems(preset.items as unknown as OverlayItem[]);
+              }}
+            >
+              Use the default
+            </Button>
+          </div>
+        )}
         <Row label="Predefined layout" hint="Pick one and tune the texts below if you want">
           <Select
             value={matching?.name ?? "custom"}

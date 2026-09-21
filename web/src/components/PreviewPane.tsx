@@ -12,6 +12,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function PreviewPane({ snapshot }: { snapshot: Snapshot }) {
   const [cacheBuster, setCacheBuster] = useState(0);
+  const [ready, setReady] = useState(false);
   const session = snapshot.session;
   const stats = snapshot.stats;
   const running = session.state === "running";
@@ -30,16 +31,16 @@ export function PreviewPane({ snapshot }: { snapshot: Snapshot }) {
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-edge bg-black">
         <img
           alt="Live camera preview"
-          className="max-h-full max-w-full object-contain"
+          className={`max-h-full max-w-full object-contain ${ready ? "" : "hidden"}`}
           src={`/api/preview.jpg?t=${cacheBuster}`}
-          onError={(event) => {
-            (event.target as HTMLImageElement).style.opacity = "0.15";
-          }}
+          onLoad={() => setReady(true)}
+          onError={() => setReady(false)}
         />
-        {idle && (
-          <p className="absolute inset-x-0 bottom-6 text-center text-sm text-slate-400">
-            The camera is off. Press "Live preview" to see what it sees, or "Start recording" to
-            capture a timelapse.
+        {!ready && (
+          <p className="px-6 text-center text-sm text-slate-400">
+            {idle
+              ? 'The camera is off. Press "Live preview" to see what it sees, or "Start recording" to capture a timelapse.'
+              : "Waiting for the first frame..."}
           </p>
         )}
         {snapshot.live_view && !running && (
