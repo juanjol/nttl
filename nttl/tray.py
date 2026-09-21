@@ -73,11 +73,18 @@ def open_in_browser(url: str) -> None:
 def open_in_file_manager(path: str) -> None:
     target = str(Path(path))
     if sys.platform.startswith("win"):
-        subprocess.Popen(["explorer", target])
+        argv = ["explorer", target]
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", target])
+        argv = ["open", target]
     else:
-        subprocess.Popen(["xdg-open", target])
+        argv = ["xdg-open", target]
+    # A windowless build has no standard handles to inherit.
+    subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 class TrayController:

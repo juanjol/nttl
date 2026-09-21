@@ -96,8 +96,11 @@ def gui(
 
     import uvicorn
 
+    from nttl.logs import configure_file_logging, default_log_path, ensure_streams
     from nttl.server.app import create_app
     from nttl.server.state import AppState
+
+    configure_file_logging(ensure_streams() or default_log_path())
 
     try:
         import webview
@@ -110,7 +113,11 @@ def gui(
     state = AppState(settings, config_path=path)
     server = uvicorn.Server(
         uvicorn.Config(
-            create_app(state), host="127.0.0.1", port=settings.web.port, log_level="warning"
+            create_app(state),
+            host="127.0.0.1",
+            port=settings.web.port,
+            log_level="warning",
+            log_config=None,
         )
     )
     thread = threading.Thread(target=server.run, daemon=True)
@@ -140,10 +147,13 @@ def tray(
 
     import uvicorn
 
+    from nttl.logs import configure_file_logging, default_log_path, ensure_streams
     from nttl.server.app import create_app
     from nttl.server.state import AppState
     from nttl.tray import TrayController, run_tray
 
+    log_path = ensure_streams() or default_log_path()
+    configure_file_logging(log_path)
     settings, path = _load(config)
     if backend:
         settings.capture.camera.backend = backend
@@ -158,6 +168,9 @@ def tray(
             host=settings.web.host,
             port=settings.web.port,
             log_level="warning",
+            # A windowless build has no stdout, so uvicorn cannot install its
+            # own handlers; records go to the log file configured above.
+            log_config=None,
         )
     )
     thread = threading.Thread(target=server.run, name="nttl-web", daemon=True)
@@ -414,5 +427,8 @@ def main() -> None:
 
 def tray_entry() -> None:
     """Entry point for the windowless tray executable."""
+    from nttl.logs import ensure_streams
+
+    ensure_streams()
     sys.argv = [sys.argv[0], "tray", *sys.argv[1:]]
     app()

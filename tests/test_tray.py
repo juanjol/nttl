@@ -157,3 +157,23 @@ def test_menu_includes_the_window_entry_only_when_available():
     assert "Open desktop window" in [item.label for item in with_window.menu_items()]
     assert with_window.has_window is True
     assert TrayController(FakeState()).has_window is False
+
+
+def test_file_manager_launch_does_not_inherit_handles(monkeypatch, tmp_path):
+    import subprocess
+
+    from nttl.tray import open_in_file_manager
+
+    captured = {}
+
+    def fake_popen(argv, **kwargs):
+        captured["argv"] = argv
+        captured["kwargs"] = kwargs
+        return None
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    open_in_file_manager(str(tmp_path))
+    assert str(tmp_path) in captured["argv"]
+    assert captured["kwargs"]["stdout"] is subprocess.DEVNULL
+    assert captured["kwargs"]["stderr"] is subprocess.DEVNULL
+    assert captured["kwargs"]["stdin"] is subprocess.DEVNULL

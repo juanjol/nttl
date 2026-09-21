@@ -90,6 +90,12 @@ docker run -d --name nttl -p 8765:8765 \
   ghcr.io/juanjol/nttl:beta
 ```
 
+### Logs
+
+A windowless build has no console, so the tray writes its log to
+`%LOCALAPPDATA%\nttl\logs\nttl.log` on Windows and `~/.local/state/nttl/logs/nttl.log` on Linux.
+Attach that file when reporting a problem.
+
 ### Build the artifacts yourself
 
 ```sh
@@ -97,7 +103,7 @@ npm --prefix web ci && npm --prefix web run build
 uv run --group build python packaging/make_icons.py build/icons
 uv run --group build pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
 # Windows only, with Inno Setup installed:
-iscc /DAppVersion=0.1.0b1 packaging\installer\nttl.iss
+iscc /DAppVersion=0.1.0b2 packaging\installer\nttl.iss
 ```
 
 ## Usage

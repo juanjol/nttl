@@ -201,3 +201,111 @@ def test_missing_asi_sdk_is_reported_clearly(tmp_path):
     result = runner.invoke(app, ["capture", "--config", str(path), "--frames", "1"])
     assert result.exit_code != 0
     assert "ASI" in str(result.exception) or "ASI" in result.output
+
+
+def tray_config(tmp_path) -> str:
+    path = tmp_path / "config.toml"
+    path.write_text(
+        "\n".join(
+            [
+                f'darks_directory = "{(tmp_path / "darks").as_posix()}"',
+                "[capture]",
+                "use_darks = false",
+                "[capture.camera]",
+                'backend = "simulated"',
+                "exposure_s = 0.01",
+                "[capture.output]",
+                f'directory = "{(tmp_path / "sessions").as_posix()}"',
+                'formats = ["jpeg"]',
+                "[web]",
+                "port = 8788",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
+def test_tray_runs_without_standard_streams(tmp_path, monkeypatch):
+    """A windowless build has no stdout, which used to break uvicorn logging."""
+    import sys
+
+    import uvicorn
+
+    import nttl.tray as tray_module
+
+    captured: dict[str, object] = {}
+    original_config = uvicorn.Config
+
+    def record_config(*args, **kwargs):
+        captured.update(kwargs)
+        return original_config(*args, **kwargs)
+
+    class DummyServer:
+        def __init__(self, config):
+            self.config = config
+            self.should_exit = False
+
+        def run(self):
+            captured["served"] = True
+
+    monkeypatch.setattr(uvicorn, "Config", record_config)
+    monkeypatch.setattr(uvicorn, "Server", DummyServer)
+    monkeypatch.setattr(tray_module, "run_tray", lambda state, **kwargs: None)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", None)
+
+    result = runner.invoke(app, ["tray", "--config", tray_config(tmp_path), "--no-open"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["log_config"] is None
+    assert (tmp_path / "state" / "nttl" / "logs" / "nttl.log").exists()
+
+
+def test_tray_starts_in_a_process_without_streams(tmp_path):
+    """Reproduces the windowless build, where sys.stdout and sys.stderr are None."""
+    import os
+    import subprocess
+    import sys
+    import textwrap
+
+    sentinel = tmp_path / "started.txt"
+    child = textwrap.dedent(
+        f"""
+        import pathlib, sys
+        sys.stdout = None
+        sys.stderr = None
+
+        import uvicorn
+
+        class DummyServer:
+            def __init__(self, config):
+                self.config = config
+                self.should_exit = False
+
+            def run(self):
+                pass
+
+        uvicorn.Server = DummyServer
+
+        import nttl.tray
+        nttl.tray.run_tray = lambda state, **kwargs: None
+
+        from nttl.cli import app
+
+        try:
+            app(["tray", "--config", {str(tray_config(tmp_path))!r}, "--no-open"])
+        except SystemExit as exc:
+            if exc.code not in (0, None):
+                raise
+        pathlib.Path({str(sentinel)!r}).write_text("ok")
+        """
+    )
+    environment = dict(os.environ, XDG_STATE_HOME=str(tmp_path / "state"))
+    result = subprocess.run(
+        [sys.executable, "-c", child], capture_output=True, text=True, env=environment
+    )
+    assert result.returncode == 0, result.stderr
+    assert sentinel.exists()
+    assert (tmp_path / "state" / "nttl" / "logs" / "nttl.log").exists()
