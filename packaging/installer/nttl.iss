@@ -6,6 +6,12 @@
   #define AppVersion "0.0.0"
 #endif
 
+; Paths in this script are relative to the script itself, so anchor them at the
+; repository root. Override with /DRepoRoot=... when building elsewhere.
+#ifndef RepoRoot
+  #define RepoRoot SourcePath + "..\..\"
+#endif
+
 #define AppName "NTTL"
 #define AppPublisher "NTTL"
 #define AppExeName "nttl-tray.exe"
@@ -22,9 +28,9 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=build\installer
+OutputDir={#RepoRoot}build\installer
 OutputBaseFilename=NTTL-{#AppVersion}-Setup
-SetupIconFile=build\icons\nttl.ico
+SetupIconFile={#RepoRoot}build\icons\nttl.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma2/max
 SolidCompression=yes
@@ -41,7 +47,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 Name: "startup"; Description: "Start NTTL when I sign in"; GroupDescription: "Startup"; Flags: unchecked
 
 [Files]
-Source: "build\dist\nttl\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#RepoRoot}build\dist\nttl\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
