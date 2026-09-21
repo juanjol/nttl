@@ -154,9 +154,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Only the publishable artifacts: pulling the web bundle as well made this
+      # step download hundreds of extra megabytes and time out.
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: windows-installer
+          path: artifacts/windows-installer
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-tarball
+          path: artifacts/linux-tarball
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: artifacts/python-dist
       - name: Create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
