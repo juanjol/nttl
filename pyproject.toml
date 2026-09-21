@@ -21,11 +21,18 @@ dependencies = [
 
 [project.optional-dependencies]
 desktop = ["pywebview>=5.2"]
+tray = [
+    "pystray>=0.19.5",
+]
 
 [project.scripts]
 nttl = "nttl.cli:main"
 
+[project.gui-scripts]
+nttl-tray = "nttl.cli:tray_entry"
+
 [dependency-groups]
+build = ["pyinstaller>=6.11"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -69,5 +76,5 @@ warn_unused_ignores = false
 plugins = []
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "astral.*", "webview.*", "astropy.*"]
+module = ["cv2.*", "astral.*", "webview.*", "astropy.*", "pystray.*"]
 ignore_missing_imports = true

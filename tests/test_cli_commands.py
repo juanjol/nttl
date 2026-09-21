@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from typer.testing import CliRunner
 
 from nttl.cli import app
@@ -124,3 +125,34 @@ def test_web_help_lists_options():
 
 def test_gui_help_is_available():
     assert runner.invoke(app, ["gui", "--help"]).exit_code == 0
+
+
+def test_tray_help_is_available():
+    result = runner.invoke(app, ["tray", "--help"])
+    assert result.exit_code == 0
+    assert "--port" in result.output
+
+
+def test_service_subcommands_are_listed():
+    result = runner.invoke(app, ["service", "--help"])
+    assert result.exit_code == 0
+    for command in ("install", "uninstall", "status"):
+        assert command in result.output
+
+
+def test_service_status_runs_on_any_platform():
+    result = runner.invoke(app, ["service", "status"])
+    assert result.exit_code == 0
+    assert "installed" in result.output
+
+
+def test_tray_entry_point_injects_the_subcommand(monkeypatch):
+    import sys
+
+    from nttl.cli import tray_entry
+
+    monkeypatch.setattr(sys, "argv", ["nttl-tray", "--help"])
+    with pytest.raises(SystemExit) as exit_info:
+        tray_entry()
+    assert exit_info.value.code == 0
+    assert sys.argv[1] == "tray"

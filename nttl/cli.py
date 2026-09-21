@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -116,6 +117,117 @@ def gui(
     finally:
         server.should_exit = True
         state.shutdown()
+
+
+@app.command()
+def tray(
+    config: ConfigOption = None,
+    host: Annotated[str | None, typer.Option("--host", help="Interface to bind")] = None,
+    port: Annotated[int | None, typer.Option("--port", help="Port to bind")] = None,
+    open_interface: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open the interface on start")
+    ] = True,
+) -> None:
+    """Run in the background with a system tray icon."""
+    import threading
+
+    import uvicorn
+
+    from nttl.server.app import create_app
+    from nttl.server.state import AppState
+    from nttl.tray import TrayController, run_tray
+
+    settings, path = _load(config)
+    if host:
+        settings.web.host = host
+    if port:
+        settings.web.port = port
+    state = AppState(settings, config_path=path)
+    server = uvicorn.Server(
+        uvicorn.Config(
+            create_app(state),
+            host=settings.web.host,
+            port=settings.web.port,
+            log_level="warning",
+        )
+    )
+    thread = threading.Thread(target=server.run, name="nttl-web", daemon=True)
+    thread.start()
+    if open_interface:
+        TrayController(state).open_interface()
+    try:
+        run_tray(state)
+    except RuntimeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    finally:
+        server.should_exit = True
+
+
+service = typer.Typer(help="Manage the systemd user service (Linux)", no_args_is_help=True)
+app.add_typer(service, name="service")
+
+
+@service.command("install")
+def service_install(
+    config: ConfigOption = None,
+    host: Annotated[str | None, typer.Option("--host")] = None,
+    port: Annotated[int | None, typer.Option("--port")] = None,
+    live_view: Annotated[bool, typer.Option("--live-view/--no-live-view")] = True,
+    linger: Annotated[
+        bool, typer.Option("--linger/--no-linger", help="Keep running after logout")
+    ] = True,
+) -> None:
+    """Install and start NTTL as a user service."""
+    import shutil
+
+    from nttl.service import ServiceError, install_service
+
+    settings, path = _load(config)
+    if not path.exists():
+        save_config(path, settings)
+    executable = shutil.which("nttl") or str(Path(sys.executable).with_name("nttl"))
+    try:
+        unit = install_service(
+            executable=executable,
+            config=path,
+            host=host,
+            port=port,
+            live_view=live_view,
+            linger=linger,
+        )
+    except ServiceError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"installed {unit}")
+    console.print(f"interface on http://{host or settings.web.host}:{port or settings.web.port}")
+
+
+@service.command("uninstall")
+def service_uninstall() -> None:
+    """Stop and remove the user service."""
+    from nttl.service import ServiceError, uninstall_service
+
+    try:
+        removed = uninstall_service()
+    except ServiceError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print("service removed" if removed else "no service was installed")
+
+
+@service.command("status")
+def service_status_command() -> None:
+    """Show whether the user service is installed and running."""
+    from nttl.service import service_status
+
+    status = service_status()
+    table = Table("field", "value", title="NTTL service")
+    for key in ("unit", "installed", "active", "enabled"):
+        table.add_row(key, str(status[key]))
+    if status.get("note"):
+        table.add_row("note", str(status["note"]))
+    console.print(table)
 
 
 @app.command()
@@ -282,4 +394,10 @@ def config(
 
 
 def main() -> None:
+    app()
+
+
+def tray_entry() -> None:
+    """Entry point for the windowless tray executable."""
+    sys.argv = [sys.argv[0], "tray", *sys.argv[1:]]
     app()
