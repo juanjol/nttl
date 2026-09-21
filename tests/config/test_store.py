@@ -73,3 +73,7 @@ def test_save_creates_parent_directories(tmp_path):
     path = tmp_path / "deep" / "nested" / "config.toml"
     save_config(path, AppConfig())
     assert path.exists()
+
+
+def test_default_backend_targets_real_hardware():
+    assert AppConfig().capture.camera.backend == "asi"

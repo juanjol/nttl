@@ -21,6 +21,9 @@ ConfigOption = Annotated[
 SimSizeOption = Annotated[
     int | None, typer.Option("--sim-size", help="Frame size for the simulated camera")
 ]
+BackendOption = Annotated[
+    str | None, typer.Option("--backend", help="Camera backend: asi or simulated")
+]
 
 
 def _version_callback(value: bool) -> None:
@@ -57,6 +60,7 @@ def web(
     config: ConfigOption = None,
     host: Annotated[str | None, typer.Option("--host", help="Interface to bind")] = None,
     port: Annotated[int | None, typer.Option("--port", help="Port to bind")] = None,
+    backend: BackendOption = None,
     live_view: Annotated[
         bool, typer.Option("--live-view/--no-live-view", help="Continuous preview when idle")
     ] = True,
@@ -68,6 +72,8 @@ def web(
     from nttl.server.state import AppState
 
     settings, path = _load(config)
+    if backend:
+        settings.capture.camera.backend = backend
     state = AppState(settings, config_path=path, live_view=live_view)
     application = create_app(state)
     bind_host = host or settings.web.host
@@ -124,6 +130,7 @@ def tray(
     config: ConfigOption = None,
     host: Annotated[str | None, typer.Option("--host", help="Interface to bind")] = None,
     port: Annotated[int | None, typer.Option("--port", help="Port to bind")] = None,
+    backend: BackendOption = None,
     open_interface: Annotated[
         bool, typer.Option("--open/--no-open", help="Open the interface on start")
     ] = True,
@@ -138,6 +145,8 @@ def tray(
     from nttl.tray import TrayController, run_tray
 
     settings, path = _load(config)
+    if backend:
+        settings.capture.camera.backend = backend
     if host:
         settings.web.host = host
     if port:
@@ -238,6 +247,7 @@ def capture(
     exposure: Annotated[float | None, typer.Option("--exposure", help="Seconds")] = None,
     gain: Annotated[float | None, typer.Option("--gain")] = None,
     session: Annotated[str | None, typer.Option("--session", help="Session name")] = None,
+    backend: BackendOption = None,
     sim_size: SimSizeOption = None,
 ) -> None:
     """Run a capture session from the console."""
@@ -247,6 +257,8 @@ def capture(
 
     settings, _ = _load(config)
     capture_config = settings.capture
+    if backend:
+        capture_config.camera.backend = backend
     if frames is not None:
         capture_config.frame_count = frames
     if interval is not None:
@@ -338,6 +350,7 @@ def darks(
     exposure: Annotated[float, typer.Option("--exposure", help="Seconds")] = 1.0,
     gain: Annotated[float, typer.Option("--gain")] = 120.0,
     frames: Annotated[int, typer.Option("--frames")] = 16,
+    backend: BackendOption = None,
     sim_size: SimSizeOption = None,
 ) -> None:
     """Build a master dark and add it to the library."""
@@ -345,6 +358,8 @@ def darks(
     from nttl.hal.registry import open_camera
 
     settings, _ = _load(config)
+    if backend:
+        settings.capture.camera.backend = backend
     camera = open_camera(
         settings.capture.camera.backend,
         settings.capture.camera.camera_id,

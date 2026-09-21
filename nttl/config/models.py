@@ -54,7 +54,7 @@ class OutputConfig(BaseModel):
 
 
 class CameraConfig(BaseModel):
-    backend: str = "simulated"
+    backend: str = "asi"
     camera_id: str | None = None
     exposure_s: float = Field(default=1.0, gt=0.0)
     gain: float = Field(default=120.0, ge=0.0)

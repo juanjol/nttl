@@ -156,3 +156,48 @@ def test_tray_entry_point_injects_the_subcommand(monkeypatch):
         tray_entry()
     assert exit_info.value.code == 0
     assert sys.argv[1] == "tray"
+
+
+def test_backend_override_uses_the_simulated_camera(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text(
+        "\n".join(
+            [
+                f'darks_directory = "{(tmp_path / "darks").as_posix()}"',
+                "[capture]",
+                'session_name = "sim"',
+                "use_darks = false",
+                "[capture.camera]",
+                'backend = "asi"',
+                "exposure_s = 0.01",
+                "[capture.output]",
+                f'directory = "{(tmp_path / "sessions").as_posix()}"',
+                'formats = ["jpeg"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "--config",
+            str(path),
+            "--frames",
+            "1",
+            "--backend",
+            "simulated",
+            "--sim-size",
+            "64",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "sessions" / "sim" / "manifest.jsonl").exists()
+
+
+def test_missing_asi_sdk_is_reported_clearly(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text('[capture.camera]\nbackend = "asi"\n', encoding="utf-8")
+    result = runner.invoke(app, ["capture", "--config", str(path), "--frames", "1"])
+    assert result.exit_code != 0
+    assert "ASI" in str(result.exception) or "ASI" in result.output

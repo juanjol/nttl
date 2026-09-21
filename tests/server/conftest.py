@@ -19,6 +19,7 @@ def wait_for(predicate, timeout=10.0):
 @pytest.fixture
 def app_config(tmp_path) -> AppConfig:
     config = AppConfig()
+    config.capture.camera.backend = "simulated"
     config.capture.session_name = "test"
     config.capture.frame_count = 3
     config.capture.interval_s = 0.0
