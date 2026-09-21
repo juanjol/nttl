@@ -5,12 +5,14 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from nttl import __version__
 from nttl.hal.errors import CameraError, ControlNotSupportedError
-from nttl.hal.registry import available_backends
+from nttl.hal.registry import available_backends, list_cameras
+from nttl.imaging.overlay import preset_items, preset_names
+from nttl.logs import memory_handler
 from nttl.server.state import AppState
 
 router = APIRouter(prefix="/api")
@@ -47,6 +49,11 @@ class DarkRequest(BaseModel):
     frames: int = 16
 
 
+class OpenFolderRequest(BaseModel):
+    target: str = "sessions"
+    session: str | None = None
+
+
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
@@ -58,13 +65,77 @@ def state_snapshot(request: Request) -> dict[str, Any]:
 
 
 @router.get("/camera")
-def camera(request: Request) -> dict[str, Any]:
-    return _state(request).camera_state()
+def camera(request: Request, connect: bool = False) -> dict[str, Any]:
+    return _state(request).camera_state(connect=connect)
 
 
 @router.get("/camera/backends")
 def backends() -> dict[str, list[str]]:
     return {"backends": available_backends()}
+
+
+@router.get("/camera/list")
+def camera_list(request: Request, backend: str | None = None) -> dict[str, Any]:
+    """Cameras the backend can see right now, for the selector in the interface."""
+    name = backend or _state(request).config.capture.camera.backend
+    try:
+        found = list_cameras(name)
+    except Exception as exc:
+        return {"backend": name, "cameras": [], "error": str(exc)}
+    return {
+        "backend": name,
+        "cameras": [
+            {
+                "camera_id": info.camera_id,
+                "name": info.name,
+                "max_width": info.max_width,
+                "max_height": info.max_height,
+                "is_color": info.is_color,
+                "has_cooler": info.has_cooler,
+            }
+            for info in found
+        ],
+        "error": None,
+    }
+
+
+@router.post("/camera/connect")
+def connect_camera(request: Request) -> dict[str, Any]:
+    state = _state(request)
+    try:
+        state.connect_camera()
+    except (CameraError, OSError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return state.camera_state(connect=True)
+
+
+@router.post("/camera/disconnect")
+def disconnect_camera(request: Request) -> dict[str, Any]:
+    state = _state(request)
+    state.stop_live_view()
+    state.disconnect_camera()
+    return state.camera_state()
+
+
+@router.post("/live/start")
+def start_live(request: Request) -> dict[str, Any]:
+    state = _state(request)
+    if state.session_running():
+        raise HTTPException(status_code=409, detail="a capture session is already running")
+    try:
+        state.connect_camera()
+    except Exception as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    state.start_live_view()
+    return {"live_view": True}
+
+
+@router.post("/live/stop")
+def stop_live(request: Request) -> dict[str, Any]:
+    state = _state(request)
+    state.stop_live_view()
+    state.disconnect_camera()
+    return {"live_view": False}
 
 
 @router.post("/camera/control")
@@ -126,6 +197,52 @@ def stop_session(request: Request) -> dict[str, Any]:
 @router.get("/sessions")
 def sessions(request: Request) -> dict[str, Any]:
     return {"sessions": _state(request).list_sessions()}
+
+
+@router.get("/videos")
+def videos(request: Request) -> dict[str, Any]:
+    return {"videos": _state(request).list_videos()}
+
+
+@router.get("/sessions/{session_name}/videos/{file_name}")
+def video_file(request: Request, session_name: str, file_name: str) -> FileResponse:
+    try:
+        path = _state(request).video_path(session_name, file_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(path)
+
+
+@router.post("/open-folder")
+def open_folder(request: Request, payload: OpenFolderRequest) -> dict[str, str]:
+    try:
+        path = _state(request).open_folder(payload.target, payload.session)
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"path": path}
+
+
+@router.get("/logs")
+def logs(after: int = 0, limit: int = 500) -> dict[str, Any]:
+    return {"entries": memory_handler().records(after=after, limit=limit)}
+
+
+@router.delete("/logs")
+def clear_logs() -> dict[str, bool]:
+    memory_handler().clear()
+    return {"cleared": True}
+
+
+@router.get("/overlay/presets")
+def overlay_presets() -> dict[str, Any]:
+    return {
+        "presets": [
+            {"name": name, "items": [item.model_dump(mode="json") for item in preset_items(name)]}
+            for name in preset_names()
+        ]
+    }
 
 
 @router.post("/compile")

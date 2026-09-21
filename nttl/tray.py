@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import subprocess
-import sys
 import webbrowser
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
 from typing import Any, Protocol
 
 from PIL import Image, ImageDraw
+
+from nttl.desktop import open_in_file_manager
 
 ICON_SIZE = 64
 
@@ -70,21 +69,6 @@ def open_in_browser(url: str) -> None:
     webbrowser.open(url)
 
 
-def open_in_file_manager(path: str) -> None:
-    target = str(Path(path))
-    if sys.platform.startswith("win"):
-        argv = ["explorer", target]
-    elif sys.platform == "darwin":
-        argv = ["open", target]
-    else:
-        argv = ["xdg-open", target]
-    # A windowless build has no standard handles to inherit.
-    subprocess.Popen(
-        argv,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
 
 
 class TrayController:

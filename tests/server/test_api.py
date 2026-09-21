@@ -20,14 +20,64 @@ def test_health(client):
 
 def test_state_snapshot(client):
     body = client.get("/api/state").json()
-    assert body["camera"]["connected"] is True
+    assert body["camera"]["connected"] is False
     assert "session" in body and "config" in body
 
 
-def test_camera_endpoint_lists_controls(client):
+def test_camera_endpoint_does_not_connect_on_its_own(client):
+    assert client.get("/api/camera").json()["connected"] is False
+
+
+def test_camera_endpoint_lists_controls_once_connected(client):
+    assert client.post("/api/camera/connect").status_code == 200
     body = client.get("/api/camera").json()
     assert "exposure" in body["controls"]
     assert body["info"]["is_color"] is True
+
+
+def test_live_preview_can_be_started_and_stopped(client):
+    assert client.post("/api/live/start").json()["live_view"] is True
+    assert client.get("/api/state").json()["live_view"] is True
+    assert client.post("/api/live/stop").json()["live_view"] is False
+    assert client.get("/api/state").json()["camera_connected"] is False
+
+
+def test_cameras_are_listed_for_the_selector(client):
+    body = client.get("/api/camera/list?backend=simulated").json()
+    assert body["backend"] == "simulated"
+    assert len(body["cameras"]) == 1
+    assert body["cameras"][0]["camera_id"]
+
+
+def test_overlay_presets_are_offered(client):
+    body = client.get("/api/overlay/presets").json()
+    presets = {entry["name"]: entry["items"] for entry in body["presets"]}
+    assert "standard" in presets
+    assert presets["standard"][0]["template"]
+
+
+def test_logs_are_readable(client):
+    client.post("/api/live/start")
+    entries = client.get("/api/logs").json()["entries"]
+    assert any("live preview" in entry["message"] for entry in entries)
+
+
+def test_open_folder_uses_the_desktop_helper(client, state, tmp_path):
+    opened: list[str] = []
+    state.open_path = opened.append
+    body = client.post("/api/open-folder", json={"target": "sessions"}).json()
+    assert opened == [body["path"]]
+    assert body["path"].endswith("sessions")
+
+
+def test_videos_are_listed_and_served(client, state, tmp_path):
+    directory = state.session_directory("test")
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "test.mp4").write_bytes(b"not really a video")
+    videos = client.get("/api/videos").json()["videos"]
+    assert [video["name"] for video in videos] == ["test.mp4"]
+    assert client.get(videos[0]["url"]).status_code == 200
+    assert client.get("/api/sessions/test/videos/../../secret.mp4").status_code in {400, 404}
 
 
 def test_backends_are_listed(client):

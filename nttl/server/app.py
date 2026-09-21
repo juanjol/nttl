@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from nttl import __version__
+from nttl.logs import memory_handler
 from nttl.server.api import router
 from nttl.server.state import AppState
 
@@ -24,6 +25,9 @@ _PLACEHOLDER = """<!doctype html>
 
 
 def create_app(state: AppState) -> FastAPI:
+    # Start buffering records before anything else, so the live log view in the
+    # interface has the whole startup sequence.
+    memory_handler()
     app = FastAPI(title="NTTL", version=__version__)
     app.state.nttl = state
     app.include_router(router)

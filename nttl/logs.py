@@ -12,9 +12,12 @@ import io
 import logging
 import os
 import sys
+import threading
+from collections import deque
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 LOG_FILE_NAME = "nttl.log"
 _MAX_BYTES = 2_000_000
@@ -81,3 +84,57 @@ def configure_file_logging(
     if root.level > level or root.level == logging.NOTSET:
         root.setLevel(level)
     return handler
+
+
+class MemoryLogHandler(logging.Handler):
+    """Keep the last records in memory so the interface can show them live."""
+
+    def __init__(self, capacity: int = 1000) -> None:
+        super().__init__()
+        self._records: deque[dict[str, Any]] = deque(maxlen=capacity)
+        self._lock = threading.Lock()
+        self._next_id = 1
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = record.getMessage()
+            if record.exc_info:
+                message = f"{message}\n{self.format(record)}"
+        except Exception:  # pragma: no cover - never break the caller
+            message = str(record.msg)
+        with self._lock:
+            entry: dict[str, Any] = {
+                "id": self._next_id,
+                "time": datetime.fromtimestamp(record.created, UTC).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": message,
+            }
+            self._next_id += 1
+            self._records.append(entry)
+
+    def records(self, after: int = 0, limit: int = 500) -> list[dict[str, Any]]:
+        with self._lock:
+            found = [entry for entry in self._records if int(entry["id"]) > after]
+        return found[-limit:]
+
+    def clear(self) -> None:
+        with self._lock:
+            self._records.clear()
+
+
+_memory_handler: MemoryLogHandler | None = None
+
+
+def memory_handler() -> MemoryLogHandler:
+    """The process wide buffer behind the live log view."""
+    global _memory_handler
+    if _memory_handler is None:
+        handler = MemoryLogHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        root = logging.getLogger()
+        root.addHandler(handler)
+        if root.level > logging.INFO or root.level == logging.NOTSET:
+            root.setLevel(logging.INFO)
+        _memory_handler = handler
+    return _memory_handler
