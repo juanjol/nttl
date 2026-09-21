@@ -21,3 +21,4 @@ CLAUDE.md
 .DS_Store
 *.tsbuildinfo
 /dist/
+/build/

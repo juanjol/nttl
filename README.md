@@ -38,26 +38,78 @@ Windows the ASI driver installer already registers `ASICamera2.dll`.
 
 ## Install
 
+Releases are betas for now and are published on the
+[releases page](https://github.com/juanjol/nttl/releases).
+
+### Windows
+
+Download `NTTL-<version>-Setup.exe` and run it. It installs for the current user, so it does not
+ask for administrator rights, and offers a checkbox to start NTTL when you sign in.
+
+Once running, NTTL lives in the system tray next to the clock. The icon is blue when idle, green
+while capturing and red after an error, and its menu opens the interface, starts or stops a
+capture, opens the sessions folder and quits the application.
+
+### Linux
+
+From PyPI, which is the lightest option:
+
 ```sh
-uv tool install nttl          # or: pipx install nttl
+uv tool install nttl              # or: pipx install nttl
+uv tool install 'nttl[tray]'      # adds the tray icon
 uv tool install 'nttl[desktop]'   # adds the native desktop window
 ```
 
-Building a release from a checkout needs the web interface bundled first:
+Or download the self contained tarball, which needs no Python:
+
+```sh
+tar -xzf nttl-<version>-linux-x86_64.tar.gz
+cd nttl-<version>-linux-x86_64
+./install.sh
+```
+
+For an unattended allsky, register the systemd user service:
+
+```sh
+nttl service install          # writes ~/.config/systemd/user/nttl.service and starts it
+nttl service status
+nttl service uninstall
+```
+
+The service enables linger, so it keeps running after you log out and starts on boot. On desktops
+with a notification area (KDE, XFCE, Cinnamon) `nttl tray` also works; on GNOME the tray needs an
+extension, so there the service plus the web interface is the better fit.
+
+### Docker
+
+```sh
+docker run -d --name nttl -p 8765:8765 \
+  -v /srv/nttl/config:/config -v /srv/nttl/data:/data \
+  --device /dev/bus/usb \
+  -v /opt/zwo:/opt/zwo -e NTTL_ASI_SDK=/opt/zwo/lib/libASICamera2.so \
+  ghcr.io/juanjol/nttl:beta
+```
+
+### Build the artifacts yourself
 
 ```sh
 npm --prefix web ci && npm --prefix web run build
-uv build
+uv run --group build python packaging/make_icons.py build/icons
+uv run --group build pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
+# Windows only, with Inno Setup installed:
+iscc /DAppVersion=0.1.0b1 packaging\installer\nttl.iss
 ```
 
 ## Usage
 
 ```sh
 nttl web                      # headless, web interface only
+nttl tray                     # background with a system tray icon
 nttl gui                      # desktop window with the same interface
 nttl capture --help
 nttl compile --help
 nttl darks --help
+nttl service --help           # systemd user service (Linux)
 ```
 
 ## Development

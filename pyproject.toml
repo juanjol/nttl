@@ -1,6 +1,6 @@
 [project]
 name = "nttl"
-version = "0.1.0"
+version = "0.1.0b1"
 description = "Nighttime Timelapse: high quality night timelapses for astronomy cameras"
 readme = "README.md"
 requires-python = ">=3.12"

@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version for a manual build, for example 0.1.0b2"
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  # Every build is a beta for now; flip this when the first stable ships.
+  PRERELEASE: "true"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      tag: ${{ steps.pick.outputs.tag }}
+    steps:
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+            tag="v$version"
+          else
+            tag="${GITHUB_REF_NAME}"
+            version="${tag#v}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-static
+          path: nttl/server/static
+          if-no-files-found: error
+
+  windows:
+    needs: [version, web]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-static
+          path: nttl/server/static
+      - run: uv sync --all-extras --group build
+      - run: uv run python packaging/make_icons.py build/icons
+      - run: uv run pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
+      - run: .\build\dist\nttl\nttl.exe --version
+      - run: choco install innosetup --no-progress -y
+      - run: iscc /DAppVersion=${{ needs.version.outputs.version }} packaging\installer\nttl.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/installer/*.exe
+          if-no-files-found: error
+
+  linux:
+    needs: [version, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-static
+          path: nttl/server/static
+      - run: uv sync --all-extras --group build
+      - run: uv run python packaging/make_icons.py build/icons
+      - run: uv run pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
+      - run: ./build/dist/nttl/nttl --version
+      - name: Package the tarball
+        run: |
+          name="nttl-${{ needs.version.outputs.version }}-linux-x86_64"
+          mv build/dist/nttl "build/dist/$name"
+          cp packaging/linux/install.sh "build/dist/$name/install.sh"
+          tar -czf "build/$name.tar.gz" -C build/dist "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-tarball
+          path: build/*.tar.gz
+          if-no-files-found: error
+
+  python-dist:
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-static
+          path: nttl/server/static
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  docker:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}
+            ghcr.io/${{ github.repository }}:beta
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    needs: [version, windows, linux, python-dist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes=$(mktemp)
+          {
+            echo "Beta build ${{ needs.version.outputs.version }}."
+            echo
+            echo "- Windows: run NTTL-*-Setup.exe, then start NTTL from the start menu. The tray"
+            echo "  icon shows whether it is capturing and lets you open the interface or stop it."
+            echo "- Linux: unpack the tarball and run ./install.sh, or install from PyPI with"
+            echo "  'uv tool install nttl' and register the service with 'nttl service install'."
+            echo "- Docker: ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}"
+            echo
+            echo "This is a beta. Report anything odd in the issues."
+          } > "$notes"
+          gh release create "${{ needs.version.outputs.tag }}" \
+            --title "NTTL ${{ needs.version.outputs.version }}" \
+            --notes-file "$notes" \
+            --prerelease \
+            artifacts/windows-installer/* artifacts/linux-tarball/* artifacts/python-dist/*
