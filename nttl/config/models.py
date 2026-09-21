@@ -1,13 +1,42 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
 
-from nttl.capture.autoexposure import AutoExposureConfig
 from nttl.imaging.overlay import OverlayConfig
 from nttl.imaging.stretch import StretchConfig
 from nttl.imaging.writers import ImageFormat
+
+
+class Priority(StrEnum):
+    EXPOSURE = "exposure"
+    GAIN = "gain"
+
+
+class AutoExposureConfig(BaseModel):
+    enabled: bool = True
+    target_level: float = Field(default=0.22, gt=0.0, lt=1.0)
+    tolerance: float = Field(default=0.03, ge=0.0, lt=0.5)
+    min_exposure_s: float = Field(default=0.001, gt=0.0)
+    max_exposure_s: float = Field(default=30.0, gt=0.0)
+    min_gain: float = Field(default=0.0, ge=0.0)
+    max_gain: float = Field(default=400.0, ge=0.0)
+    priority: Priority = Priority.EXPOSURE
+    max_change_factor: float = Field(default=1.6, gt=1.0, le=16.0)
+    max_gain_step: float = Field(default=40.0, gt=0.0)
+    damping: float = Field(default=0.7, gt=0.0, le=1.0)
+    saturation_limit: float = Field(default=0.02, ge=0.0, le=1.0)
+    saturation_reduction: float = Field(default=0.7, gt=0.0, lt=1.0)
+
+    @model_validator(mode="after")
+    def _check_ranges(self) -> AutoExposureConfig:
+        if self.min_exposure_s > self.max_exposure_s:
+            raise ValueError("min_exposure_s must not exceed max_exposure_s")
+        if self.min_gain > self.max_gain:
+            raise ValueError("min_gain must not exceed max_gain")
+        return self
 
 
 class OutputConfig(BaseModel):
