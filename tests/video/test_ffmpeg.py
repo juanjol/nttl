@@ -88,6 +88,13 @@ def test_build_command_supports_prores(tmp_path):
     assert "-crf" not in argv
 
 
+def fake_ffmpeg(tmp_path):
+    """A stand in binary so discovery succeeds without ffmpeg installed."""
+    binary = tmp_path / "ffmpeg"
+    binary.write_text("")
+    return binary
+
+
 def test_compile_reports_progress_and_output(tmp_path, monkeypatch):
     manifest = write_manifest(tmp_path, count=5)
     progress = []
@@ -102,7 +109,7 @@ def test_compile_reports_progress_and_output(tmp_path, monkeypatch):
         manifest,
         tmp_path / "out.mp4",
         VideoConfig(),
-        ffmpeg="/usr/bin/ffmpeg",
+        ffmpeg=fake_ffmpeg(tmp_path),
         runner=fake_run,
         on_progress=lambda done, total: progress.append((done, total)),
     )
@@ -124,7 +131,11 @@ def test_compile_raises_without_frames(tmp_path):
     manifest.write_text("")
     with pytest.raises(ValueError):
         compile_timelapse(
-            manifest, tmp_path / "out.mp4", VideoConfig(), ffmpeg="ffmpeg", runner=lambda *a: 0
+            manifest,
+            tmp_path / "out.mp4",
+            VideoConfig(),
+            ffmpeg=fake_ffmpeg(tmp_path),
+            runner=lambda *a: 0,
         )
 
 
@@ -135,7 +146,7 @@ def test_compile_raises_on_ffmpeg_failure(tmp_path):
             manifest,
             tmp_path / "out.mp4",
             VideoConfig(),
-            ffmpeg="ffmpeg",
+            ffmpeg=fake_ffmpeg(tmp_path),
             runner=lambda argv, on_line: 1,
         )
 

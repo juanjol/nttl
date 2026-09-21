@@ -4,7 +4,8 @@ from typer.testing import CliRunner
 
 from nttl.cli import app
 
-runner = CliRunner()
+# A wide, dumb terminal keeps rich from truncating option names and paths.
+runner = CliRunner(env={"COLUMNS": "200", "TERM": "dumb", "NO_COLOR": "1"})
 
 
 def config_file(tmp_path) -> str:

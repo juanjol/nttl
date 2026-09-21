@@ -3,7 +3,7 @@ from typer.testing import CliRunner
 from nttl import __version__
 from nttl.cli import app
 
-runner = CliRunner()
+runner = CliRunner(env={"COLUMNS": "200", "TERM": "dumb", "NO_COLOR": "1"})
 
 
 def test_version_flag_reports_package_version():
