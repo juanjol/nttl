@@ -1,4 +1,5 @@
 from nttl.hal.base import Camera
+from nttl.hal.registry import available_backends, list_cameras, open_camera
 from nttl.hal.types import (
     BayerPattern,
     CameraInfo,
@@ -18,4 +19,7 @@ __all__ = [
     "Frame",
     "FrameMetadata",
     "Roi",
+    "available_backends",
+    "list_cameras",
+    "open_camera",
 ]
