@@ -642,7 +642,7 @@ wheels = [
 
 [[package]]
 name = "nttl"
-version = "0.1.0b2"
+version = "0.1.0b4"
 source = { editable = "." }
 dependencies = [
     { name = "astral" },
