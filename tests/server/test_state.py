@@ -7,12 +7,25 @@ from nttl.video.jobs import JobState
 from tests.server.conftest import wait_for
 
 
-def test_camera_connects_lazily_and_reports_state(state):
+def test_camera_stays_disconnected_until_asked(state):
+    assert state.camera_connected is False
+    assert state.camera_state()["connected"] is False
+
+
+def test_camera_connects_on_request_and_reports_state(state):
+    state.connect_camera()
     snapshot = state.camera_state()
+    assert state.camera_connected is True
     assert snapshot["connected"] is True
     assert snapshot["info"]["backend"] == "simulated"
     assert "exposure" in snapshot["controls"]
     assert snapshot["values"]["gain"] >= 0
+
+
+def test_disconnecting_releases_the_camera(state):
+    state.connect_camera()
+    state.disconnect_camera()
+    assert state.camera_connected is False
 
 
 def test_set_control_updates_value(state):
@@ -112,7 +125,8 @@ def test_dark_build_job_creates_library_entry(state):
 
 
 def test_dark_library_is_used_by_sessions_when_enabled(state):
-    job = state.build_darks(exposure_s=0.01, gain=120.0, frames=3)
+    camera_config = state.config.capture.camera
+    job = state.build_darks(exposure_s=camera_config.exposure_s, gain=camera_config.gain, frames=3)
     assert wait_for(lambda: state.jobs.get(job.id).state is JobState.FINISHED)
     state.config.capture.use_darks = True
     state.start_session({"frame_count": 1})

@@ -48,15 +48,15 @@ def render_unit(
     config: str | Path,
     host: str | None = None,
     port: int | None = None,
-    live_view: bool = True,
+    live_view: bool = False,
 ) -> str:
     command = f"{executable} web --config {config}"
     if host:
         command += f" --host {host}"
     if port:
         command += f" --port {port}"
-    if not live_view:
-        command += " --no-live-view"
+    if live_view:
+        command += " --live-view"
     return _TEMPLATE.format(command=command)
 
 
@@ -74,7 +74,7 @@ def install_service(
     config: str | Path,
     host: str | None = None,
     port: int | None = None,
-    live_view: bool = True,
+    live_view: bool = False,
     unit_dir: Path | None = None,
     runner: Runner | None = None,
     platform: str | None = None,

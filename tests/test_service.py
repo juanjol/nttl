@@ -37,8 +37,9 @@ def test_unit_can_bind_a_host_and_port():
     assert "--port 9000" in unit
 
 
-def test_unit_can_disable_the_live_view():
-    assert "--no-live-view" in render_unit(executable="nttl", config="c.toml", live_view=False)
+def test_unit_leaves_the_camera_alone_unless_asked():
+    assert "--live-view" not in render_unit(executable="nttl", config="c.toml")
+    assert "--live-view" in render_unit(executable="nttl", config="c.toml", live_view=True)
 
 
 def test_install_writes_the_unit_and_enables_it(tmp_path):

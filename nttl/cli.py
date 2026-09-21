@@ -66,8 +66,12 @@ def web(
     port: Annotated[int | None, typer.Option("--port", help="Port to bind")] = None,
     backend: BackendOption = None,
     live_view: Annotated[
-        bool, typer.Option("--live-view/--no-live-view", help="Continuous preview when idle")
-    ] = True,
+        bool,
+        typer.Option(
+            "--live-view/--no-live-view",
+            help="Connect the camera and preview on start, off by default",
+        ),
+    ] = False,
 ) -> None:
     """Serve the web interface (use this for headless setups)."""
     import uvicorn
@@ -199,7 +203,7 @@ def service_install(
     config: ConfigOption = None,
     host: Annotated[str | None, typer.Option("--host")] = None,
     port: Annotated[int | None, typer.Option("--port")] = None,
-    live_view: Annotated[bool, typer.Option("--live-view/--no-live-view")] = True,
+    live_view: Annotated[bool, typer.Option("--live-view/--no-live-view")] = False,
     linger: Annotated[
         bool, typer.Option("--linger/--no-linger", help="Keep running after logout")
     ] = True,
@@ -414,7 +418,7 @@ def config(
     table.add_row("exposure", f"{settings.capture.camera.exposure_s:g} s")
     table.add_row("gain", f"{settings.capture.camera.gain:g}")
     table.add_row("auto exposure", str(settings.capture.auto_exposure.enabled))
-    table.add_row("formats", ", ".join(str(fmt) for fmt in settings.capture.output.formats))
+    table.add_row("format", str(settings.capture.output.format))
     table.add_row("output directory", str(settings.capture.output.directory))
     table.add_row("darks directory", str(settings.darks_directory))
     table.add_row(
