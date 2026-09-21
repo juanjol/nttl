@@ -69,7 +69,7 @@ jobs:
         with:
           name: web-static
           path: nttl/server/static
-      - run: uv sync --all-extras --group build
+      - run: uv sync --no-default-groups --all-extras --group build
       - run: uv run python packaging/make_icons.py build/icons
       - run: uv run pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
       - run: .\build\dist\nttl\nttl.exe --version
@@ -93,7 +93,7 @@ jobs:
         with:
           name: web-static
           path: nttl/server/static
-      - run: uv sync --all-extras --group build
+      - run: uv sync --no-default-groups --all-extras --group build
       - run: uv run python packaging/make_icons.py build/icons
       - run: uv run pyinstaller --noconfirm --distpath build/dist --workpath build/work packaging/nttl.spec
       - run: ./build/dist/nttl/nttl --version

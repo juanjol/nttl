@@ -29,6 +29,8 @@ hiddenimports += collect_submodules("pystray")
 # handful of clients.
 excludes = [
     "IPython",
+    "astropy.samp",
+    "astropy.visualization",
     "matplotlib",
     "pytest",
     "scipy",
