@@ -47,6 +47,10 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = ["hardware: requires a physical camera connected"]
 addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore:Using `httpx` with `starlette.testclient`:UserWarning",
+]
 
 [tool.ruff]
 line-length = 100
