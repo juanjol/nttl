@@ -62,5 +62,5 @@ warn_unused_ignores = false
 plugins = []
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "astral.*", "webview.*"]
+module = ["cv2.*", "astral.*", "webview.*", "astropy.*"]
 ignore_missing_imports = true
