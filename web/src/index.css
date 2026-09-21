@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sky-night: #0b0f17;
+  --color-panel: #131a26;
+  --color-panel-soft: #1a2333;
+  --color-edge: #243043;
+  --color-accent: #7aa2f7;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-sky-night);
+  color: #e6edf3;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent);
+}

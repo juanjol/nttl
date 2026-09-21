@@ -47,6 +47,16 @@ uv run ruff check .
 uv run mypy nttl
 ```
 
+The web interface lives in `web/` and builds into `nttl/server/static`, from where the server
+serves it:
+
+```sh
+npm --prefix web install
+npm --prefix web run build     # production bundle
+npm --prefix web run dev       # dev server proxying the API to port 8765
+npm --prefix web test
+```
+
 ## License
 
 MIT
