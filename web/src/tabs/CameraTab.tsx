@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-import { NumberInput, Row, Section, Select, Slider, TextInput, Toggle } from "../components/controls";
+import { Button, NumberInput, Row, Section, Select, Slider, Toggle } from "../components/controls";
+import type { CameraOption } from "../types";
 import { bool, num, str, type TabProps } from "./common";
 
 const HIDDEN_CONTROLS = new Set(["exposure", "cooler_on", "target_temp"]);
@@ -10,6 +12,40 @@ export function CameraTab({ snapshot, expert, update }: TabProps) {
   const info = camera.info;
   const controls = camera.controls ?? {};
   const values = camera.values ?? {};
+  const backend = str(config, ["capture", "camera", "backend"], "simulated");
+  const selected = str(config, ["capture", "camera", "camera_id"]);
+  const [found, setFound] = useState<CameraOption[]>([]);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+
+  const scan = useCallback(
+    (name: string) => {
+      setScanning(true);
+      api
+        .cameras(name)
+        .then((body) => {
+          setFound(body.cameras);
+          setScanError(body.error);
+        })
+        .catch((exc: Error) => setScanError(exc.message))
+        .finally(() => setScanning(false));
+    },
+    [],
+  );
+
+  useEffect(() => scan(backend), [backend, scan]);
+
+  const options = [
+    { value: "", label: found.length ? "First camera found" : "No camera detected" },
+    ...found.map((entry) => ({
+      value: entry.camera_id,
+      label: `${entry.name} (id ${entry.camera_id})`,
+    })),
+  ];
+  // A camera saved earlier may not be plugged in right now.
+  if (selected && !found.some((entry) => entry.camera_id === selected)) {
+    options.push({ value: selected, label: `${selected} (not detected)` });
+  }
 
   return (
     <div>
@@ -24,14 +60,23 @@ export function CameraTab({ snapshot, expert, update }: TabProps) {
             onChange={(value) => update(["capture", "camera", "backend"], value)}
           />
         </Row>
-        <Row label="Camera id" hint="Leave empty to use the first camera found">
-          <TextInput
-            value={str(config, ["capture", "camera", "camera_id"])}
-            onChange={(value) =>
-              update(["capture", "camera", "camera_id"], value.length ? value : null)
-            }
-          />
+        <Row label="Camera" hint="Pick one when several cameras are connected">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select
+                value={selected}
+                options={options}
+                onChange={(value) =>
+                  update(["capture", "camera", "camera_id"], value.length ? value : null)
+                }
+              />
+            </div>
+            <Button onClick={() => scan(backend)} disabled={scanning}>
+              {scanning ? "Scanning" : "Rescan"}
+            </Button>
+          </div>
         </Row>
+        {scanError && <p className="pb-2 text-xs text-amber-300">{scanError}</p>}
         {info && (
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-400">
             <dt>Sensor</dt>

@@ -1,5 +1,6 @@
-import { NumberInput, Row, Section, Select, TextInput } from "../components/controls";
-import { list, num, str, type TabProps } from "./common";
+import { api } from "../api";
+import { Button, NumberInput, Row, Section, Select, TextInput } from "../components/controls";
+import { num, str, type TabProps } from "./common";
 
 const FORMATS = [
   { value: "fits", label: "FITS 16 bit (raw data)" },
@@ -10,36 +11,28 @@ const FORMATS = [
 
 export function OutputTab({ snapshot, expert, update }: TabProps) {
   const config = snapshot.config;
-  const formats = list<string>(config, ["capture", "output", "formats"]);
   const mode = str(config, ["capture", "output", "stretch", "mode"], "auto");
 
   return (
     <div>
       <Section title="Files">
         <Row label="Output directory">
-          <TextInput
-            value={str(config, ["capture", "output", "directory"], "sessions")}
-            onChange={(value) => update(["capture", "output", "directory"], value)}
-          />
-        </Row>
-        <Row label="Formats" hint="FITS keeps the linear data for reprocessing">
-          <div className="flex flex-col gap-1">
-            {FORMATS.map((format) => (
-              <label key={format.value} className="flex items-center gap-2 text-sm text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={formats.includes(format.value)}
-                  onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...formats, format.value]
-                      : formats.filter((item) => item !== format.value);
-                    update(["capture", "output", "formats"], next);
-                  }}
-                />
-                {format.label}
-              </label>
-            ))}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={str(config, ["capture", "output", "directory"], "sessions")}
+                onChange={(value) => update(["capture", "output", "directory"], value)}
+              />
+            </div>
+            <Button onClick={() => void api.openFolder("sessions")}>Open folder</Button>
           </div>
+        </Row>
+        <Row label="File format" hint="FITS keeps the linear data for reprocessing">
+          <Select
+            value={str(config, ["capture", "output", "format"], "jpeg")}
+            options={FORMATS}
+            onChange={(value) => update(["capture", "output", "format"], value)}
+          />
         </Row>
         {expert && (
           <Row label="File name template" expert hint="Tokens: {session} and {seq}">

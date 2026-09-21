@@ -85,6 +85,41 @@ export interface Snapshot {
   config: Json;
   stats: FrameStatsView | null;
   live_view: boolean;
+  live_requested?: boolean;
+  live_error?: string | null;
+  camera_connected?: boolean;
+  directories?: { sessions: string; darks: string };
+}
+
+export interface CameraOption {
+  camera_id: string;
+  name: string;
+  max_width: number;
+  max_height: number;
+  is_color: boolean;
+  has_cooler: boolean;
+}
+
+export interface VideoEntry {
+  session: string;
+  name: string;
+  path: string;
+  size_bytes: number;
+  modified_utc: string;
+  url: string;
+}
+
+export interface LogEntry {
+  id: number;
+  time: string;
+  level: string;
+  logger: string;
+  message: string;
+}
+
+export interface OverlayPreset {
+  name: string;
+  items: Record<string, unknown>[];
 }
 
 export interface SessionEntry {

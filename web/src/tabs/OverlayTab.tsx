@@ -1,5 +1,12 @@
+import { useEffect, useState } from "react";
+import { api } from "../api";
 import { Button, NumberInput, Row, Section, Select, TextInput, Toggle } from "../components/controls";
+import type { OverlayPreset } from "../types";
 import { bool, list, num, str, type TabProps } from "./common";
+
+function templateOf(item: { template?: unknown }): string {
+  return String(item.template ?? "");
+}
 
 interface OverlayItem {
   template: string;
@@ -42,10 +49,33 @@ const DEFAULT_ITEM: OverlayItem = {
   background: null,
 };
 
+const PRESET_LABELS: Record<string, string> = {
+  none: "No text",
+  timestamp: "Date and time",
+  standard: "Date, exposure and gain",
+  detailed: "Everything (camera, frame, exposure)",
+};
+
 export function OverlayTab({ snapshot, expert, update }: TabProps) {
   const config = snapshot.config;
   const path = ["capture", "output", "overlay"];
   const items = list<OverlayItem>(config, [...path, "items"]);
+  const [presets, setPresets] = useState<OverlayPreset[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .overlayPresets()
+      .then((body) => !cancelled && setPresets(body.presets))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const matching = presets.find(
+    (preset) => JSON.stringify(preset.items.map(templateOf)) === JSON.stringify(items.map(templateOf)),
+  );
 
   const setItems = (next: OverlayItem[]) => update([...path, "items"], next);
   const patchItem = (index: number, patch: Partial<OverlayItem>) =>
@@ -85,6 +115,25 @@ export function OverlayTab({ snapshot, expert, update }: TabProps) {
             />
           </Row>
         )}
+      </Section>
+
+      <Section title="Template">
+        <Row label="Predefined layout" hint="Pick one and tune the texts below if you want">
+          <Select
+            value={matching?.name ?? "custom"}
+            options={[
+              ...presets.map((preset) => ({
+                value: preset.name,
+                label: PRESET_LABELS[preset.name] ?? preset.name,
+              })),
+              { value: "custom", label: "Custom" },
+            ]}
+            onChange={(value) => {
+              const preset = presets.find((entry) => entry.name === value);
+              if (preset) setItems(preset.items as unknown as OverlayItem[]);
+            }}
+          />
+        </Row>
       </Section>
 
       <Section title="Items">

@@ -7,9 +7,11 @@ import { useSnapshot } from "./hooks/useSnapshot";
 import { CameraTab } from "./tabs/CameraTab";
 import { CaptureTab } from "./tabs/CaptureTab";
 import { DarksTab } from "./tabs/DarksTab";
+import { LogsTab } from "./tabs/LogsTab";
 import { OutputTab } from "./tabs/OutputTab";
 import { OverlayTab } from "./tabs/OverlayTab";
 import { ScheduleTab } from "./tabs/ScheduleTab";
+import { TimelapsesTab } from "./tabs/TimelapsesTab";
 import { VideoTab } from "./tabs/VideoTab";
 import type { TabProps } from "./tabs/common";
 
@@ -20,7 +22,9 @@ const TABS: { id: string; label: string; render: (props: TabProps) => ReactEleme
   { id: "overlay", label: "Overlay", render: (props) => <OverlayTab {...props} /> },
   { id: "darks", label: "Darks", render: (props) => <DarksTab {...props} /> },
   { id: "video", label: "Video", render: (props) => <VideoTab {...props} /> },
+  { id: "timelapses", label: "Timelapses", render: (props) => <TimelapsesTab {...props} /> },
   { id: "schedule", label: "Schedule", render: (props) => <ScheduleTab {...props} /> },
+  { id: "logs", label: "Logs", render: () => <LogsTab /> },
 ];
 
 export default function App() {
@@ -51,18 +55,26 @@ export default function App() {
 
   const session = snapshot.session;
   const running = session.state === "running";
+  const live = snapshot.live_view;
+  const connected = snapshot.camera_connected ?? snapshot.camera.connected;
+
+  const act = (action: () => Promise<unknown>) => {
+    setBusy(true);
+    action()
+      .then(() => setMessage(null))
+      .catch((exc: Error) => setMessage(exc.message))
+      .finally(() => setBusy(false));
+  };
 
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-edge bg-panel px-4 py-3">
         <h1 className="text-lg font-semibold tracking-tight">NTTL</h1>
         <span className="text-sm text-slate-400">
-          {snapshot.camera.info?.name ?? "no camera"}
+          {snapshot.camera.info?.name ?? (connected ? "camera" : "camera off")}
         </span>
         <span
-          className={`h-2 w-2 rounded-full ${
-            snapshot.camera.connected ? "bg-emerald-400" : "bg-rose-500"
-          }`}
+          className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-slate-600"}`}
         />
         <span className="rounded-full border border-edge px-2 py-0.5 text-xs text-slate-300">
           {session.session_name}: {session.state}
@@ -72,22 +84,48 @@ export default function App() {
             scheduler {snapshot.scheduler.in_window ? "in window" : "waiting"}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3">
           <label className="flex items-center gap-2 text-xs text-slate-400">
             Expert mode
             <Toggle label="Expert mode" checked={expert} onChange={setExpert} />
           </label>
           <button
             type="button"
-            onClick={() => void (running ? api.stopSession() : api.startSession())}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            onClick={() => act(() => api.openFolder("sessions"))}
+            className="rounded-md border border-edge px-3 py-1.5 text-sm text-slate-200 hover:bg-panel-soft"
+          >
+            Open folder
+          </button>
+          <button
+            type="button"
+            disabled={busy || running}
+            onClick={() => act(() => (live ? api.stopLive() : api.startLive()))}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-40 ${
+              live
+                ? "border-emerald-400/60 bg-emerald-400/20 text-emerald-200"
+                : "border-edge text-slate-200 hover:bg-panel-soft"
+            }`}
+          >
+            {live ? "Stop live preview" : "Live preview"}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => act(() => (running ? api.stopSession() : api.startSession()))}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 ${
               running ? "bg-rose-500/80 text-white" : "bg-accent text-slate-900"
             }`}
           >
-            {running ? "Stop capture" : "Start capture"}
+            {running ? "Stop recording" : "Start recording"}
           </button>
         </div>
       </header>
+
+      {snapshot.live_error && !message && (
+        <p className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+          {snapshot.live_error}
+        </p>
+      )}
 
       {message && (
         <p className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">

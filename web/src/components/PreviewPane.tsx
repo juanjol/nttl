@@ -14,11 +14,14 @@ export function PreviewPane({ snapshot }: { snapshot: Snapshot }) {
   const [cacheBuster, setCacheBuster] = useState(0);
   const session = snapshot.session;
   const stats = snapshot.stats;
+  const running = session.state === "running";
+  const idle = !snapshot.live_view && !running;
 
   useEffect(() => {
+    if (idle) return;
     const timer = window.setInterval(() => setCacheBuster((value) => value + 1), 2000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [idle]);
 
   const level = stats?.level ?? session.level ?? 0;
 
@@ -33,10 +36,22 @@ export function PreviewPane({ snapshot }: { snapshot: Snapshot }) {
             (event.target as HTMLImageElement).style.opacity = "0.15";
           }}
         />
-        {session.state === "running" && (
+        {idle && (
+          <p className="absolute inset-x-0 bottom-6 text-center text-sm text-slate-400">
+            The camera is off. Press "Live preview" to see what it sees, or "Start recording" to
+            capture a timelapse.
+          </p>
+        )}
+        {snapshot.live_view && !running && (
+          <span className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-sky-300">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            live preview
+          </span>
+        )}
+        {running && (
           <span className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-emerald-300">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            capturing
+            recording
           </span>
         )}
       </div>

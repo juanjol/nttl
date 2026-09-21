@@ -1,23 +1,8 @@
-import { useEffect, useState } from "react";
-import { api } from "../api";
-import { Button, NumberInput, Row, Section, Select } from "../components/controls";
-import type { SessionEntry } from "../types";
+import { NumberInput, Row, Section, Select } from "../components/controls";
 import { num, str, type TabProps } from "./common";
 
 export function VideoTab({ snapshot, expert, update }: TabProps) {
   const config = snapshot.config;
-  const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const compileJobs = snapshot.jobs.filter((job) => job.name.startsWith("compile:"));
-
-  const reload = () => {
-    api
-      .sessions()
-      .then((body) => setSessions(body.sessions))
-      .catch((exc: Error) => setError(exc.message));
-  };
-
-  useEffect(reload, [snapshot.session.frames_captured, compileJobs[0]?.state]);
 
   return (
     <div>
@@ -89,40 +74,6 @@ export function VideoTab({ snapshot, expert, update }: TabProps) {
             ffmpeg was not found. Install it and make sure it is on PATH to compile videos.
           </p>
         )}
-      </Section>
-
-      <Section title="Sessions">
-        {sessions.length === 0 && <p className="text-sm text-slate-500">No sessions captured yet.</p>}
-        <ul className="flex flex-col gap-2">
-          {sessions.map((session) => (
-            <li
-              key={session.name}
-              className="rounded-md border border-edge bg-panel-soft/60 px-2 py-1.5 text-xs"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-slate-200">{session.name}</div>
-                  <div className="text-slate-500">
-                    {session.frames} frames
-                    {session.videos.length > 0 && `, ${session.videos.join(", ")}`}
-                  </div>
-                </div>
-                <Button
-                  disabled={!snapshot.ffmpeg.available}
-                  onClick={() =>
-                    void api
-                      .compile(session.name)
-                      .then(reload)
-                      .catch((exc: Error) => setError(exc.message))
-                  }
-                >
-                  Compile
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
       </Section>
 
       <Section title="Jobs">

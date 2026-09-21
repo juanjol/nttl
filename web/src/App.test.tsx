@@ -48,7 +48,7 @@ const snapshot: Snapshot = {
       use_darks: true,
       auto_exposure: { enabled: true, target_level: 0.22 },
       camera: { backend: "asi", exposure_s: 8, gain: 220, bin: 1, offset: 30 },
-      output: { directory: "sessions", formats: ["jpeg"], stretch: { mode: "auto" }, overlay: { enabled: true, items: [] } },
+      output: { directory: "sessions", format: "jpeg", stretch: { mode: "auto" }, overlay: { enabled: true, items: [] } },
     },
     schedule: { enabled: true, mode: "solar", latitude: 43, longitude: -2 },
     video: { codec: "h264", fps: 24, crf: 18 },
@@ -56,6 +56,10 @@ const snapshot: Snapshot = {
   },
   stats: { median: 5000, level: 0.21, saturated_fraction: 0.001, max: 65535 },
   live_view: true,
+  live_requested: true,
+  live_error: null,
+  camera_connected: true,
+  directories: { sessions: "/tmp/sessions", darks: "/tmp/darks" },
 };
 
 describe("App", () => {
@@ -88,7 +92,17 @@ describe("App", () => {
   it("renders every panel tab", async () => {
     render(<App />);
     await screen.findByText("ASI294MC Pro");
-    for (const label of ["Capture", "Camera", "Output", "Overlay", "Darks", "Video", "Schedule"]) {
+    for (const label of [
+      "Capture",
+      "Camera",
+      "Output",
+      "Overlay",
+      "Darks",
+      "Video",
+      "Timelapses",
+      "Schedule",
+      "Logs",
+    ]) {
       expect(screen.getByRole("button", { name: label })).toBeTruthy();
     }
   });
@@ -101,13 +115,33 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByText("Priority")).toBeTruthy());
   });
 
-  it("starts a capture from the header", async () => {
+  it("starts a recording from the header", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => snapshot });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
-    (await screen.findByRole("button", { name: "Start capture" })).click();
+    (await screen.findByRole("button", { name: "Start recording" })).click();
     await waitFor(() =>
       expect(fetchMock.mock.calls.some((call) => call[0] === "/api/session/start")).toBe(true),
+    );
+  });
+
+  it("stops the live preview from the header", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => snapshot });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    (await screen.findByRole("button", { name: "Stop live preview" })).click();
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((call) => call[0] === "/api/live/stop")).toBe(true),
+    );
+  });
+
+  it("opens the captures folder from the header", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => snapshot });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    (await screen.findByRole("button", { name: "Open folder" })).click();
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((call) => call[0] === "/api/open-folder")).toBe(true),
     );
   });
 });

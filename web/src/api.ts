@@ -1,4 +1,13 @@
-import type { DarkEntryView, JobInfo, SessionEntry, Snapshot } from "./types";
+import type {
+  CameraOption,
+  DarkEntryView,
+  JobInfo,
+  LogEntry,
+  OverlayPreset,
+  SessionEntry,
+  Snapshot,
+  VideoEntry,
+} from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -41,6 +50,21 @@ export const api = {
       body: JSON.stringify({ overrides: overrides ?? null }),
     }),
   stopSession: () => request<unknown>("/api/session/stop", { method: "POST" }),
+  cameras: (backend?: string) =>
+    request<{ backend: string; cameras: CameraOption[]; error: string | null }>(
+      backend ? `/api/camera/list?backend=${encodeURIComponent(backend)}` : "/api/camera/list",
+    ),
+  startLive: () => request<{ live_view: boolean }>("/api/live/start", { method: "POST" }),
+  stopLive: () => request<{ live_view: boolean }>("/api/live/stop", { method: "POST" }),
+  openFolder: (target: "sessions" | "darks" = "sessions", session?: string) =>
+    request<{ path: string }>("/api/open-folder", {
+      method: "POST",
+      body: JSON.stringify({ target, session: session ?? null }),
+    }),
+  videos: () => request<{ videos: VideoEntry[] }>("/api/videos"),
+  logs: (after = 0) => request<{ entries: LogEntry[] }>(`/api/logs?after=${after}`),
+  clearLogs: () => request<unknown>("/api/logs", { method: "DELETE" }),
+  overlayPresets: () => request<{ presets: OverlayPreset[] }>("/api/overlay/presets"),
   sessions: () => request<{ sessions: SessionEntry[] }>("/api/sessions"),
   compile: (session: string, video?: Record<string, unknown>) =>
     request<JobInfo>("/api/compile", {

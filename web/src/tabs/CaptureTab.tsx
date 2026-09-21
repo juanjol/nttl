@@ -1,11 +1,9 @@
-import { Button, NumberInput, Row, Section, Select, TextInput, Toggle } from "../components/controls";
-import { api } from "../api";
+import { NumberInput, Row, Section, Select, TextInput, Toggle } from "../components/controls";
 import { bool, num, str, type TabProps } from "./common";
 
-export function CaptureTab({ snapshot, expert, update, busy }: TabProps) {
+export function CaptureTab({ snapshot, expert, update }: TabProps) {
   const config = snapshot.config;
   const auto = bool(config, ["capture", "auto_exposure", "enabled"]);
-  const running = snapshot.session.state === "running";
 
   return (
     <div>
@@ -16,7 +14,10 @@ export function CaptureTab({ snapshot, expert, update, busy }: TabProps) {
             onChange={(value) => update(["capture", "session_name"], value)}
           />
         </Row>
-        <Row label="Interval between frames (s)" hint="0 captures as fast as the camera allows">
+        <Row
+          label="Interval between frames (s)"
+          hint="A frame every 5 seconds by default, 0 captures as fast as the camera allows"
+        >
           <NumberInput
             value={num(config, ["capture", "interval_s"])}
             min={0}
@@ -78,7 +79,7 @@ export function CaptureTab({ snapshot, expert, update, busy }: TabProps) {
                 onChange={(value) => update(["capture", "auto_exposure", "target_level"], value)}
               />
             </Row>
-            <Row label="Exposure limits (s)">
+            <Row label="Exposure limits (s)" hint="The ceiling also sets the slowest cadence">
               <div className="flex gap-2">
                 <NumberInput
                   value={num(config, ["capture", "auto_exposure", "min_exposure_s"], 0.001)}
@@ -177,21 +178,6 @@ export function CaptureTab({ snapshot, expert, update, busy }: TabProps) {
             )}
           </>
         )}
-      </Section>
-
-      <Section title="Control">
-        <div className="flex gap-2 pt-1">
-          <Button
-            variant="primary"
-            disabled={busy || running}
-            onClick={() => void api.startSession()}
-          >
-            Start now
-          </Button>
-          <Button variant="danger" disabled={!running} onClick={() => void api.stopSession()}>
-            Stop now
-          </Button>
-        </div>
       </Section>
     </div>
   );
