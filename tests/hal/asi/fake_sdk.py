@@ -8,6 +8,7 @@ from nttl.hal.asi._bindings import (
     AsiError,
     ControlType,
     ExposureStatus,
+    ImageType,
 )
 from nttl.hal.simulated import SimulatedCamera
 from nttl.hal.types import BayerPattern, ControlName, Roi
@@ -44,7 +45,9 @@ class FakeAsiSdk:
         has_cooler: bool = True,
         cameras: int = 1,
         fail_exposure: bool = False,
+        formats: tuple[int, ...] = (ImageType.RAW8, ImageType.RAW16),
     ) -> None:
+        self._formats = formats
         self._sim = SimulatedCamera(
             seed=17,
             width=width,
@@ -63,6 +66,7 @@ class FakeAsiSdk:
         self._start_x = 0
         self._start_y = 0
         self._bin = 1
+        self._image_type = ImageType.RAW16
         self._width = width
         self._height = height
         self.calls: list[str] = []
@@ -84,6 +88,7 @@ class FakeAsiSdk:
             is_color=info.is_color,
             bayer_pattern=_BAYER_CODES.get(info.bayer_pattern, 0),
             supported_bins=info.supported_bins,
+            supported_formats=self._formats,
             pixel_size_um=info.pixel_size_um,
             has_cooler=info.has_cooler,
             bit_depth=info.bit_depth,
@@ -152,6 +157,7 @@ class FakeAsiSdk:
     ) -> None:
         self.calls.append(f"roi:{width}x{height}/{binning}")
         self._width, self._height, self._bin = width, height, binning
+        self._image_type = image_type
         self._apply_roi()
 
     def set_start_position(self, camera_id: int, x: int, y: int) -> None:
@@ -178,7 +184,10 @@ class FakeAsiSdk:
             self._status = ExposureStatus.FAILED
             return
         frame = self._sim.expose(self._exposure_us / 1_000_000, dark=dark)
-        self._pending = frame.data.tobytes()
+        data = frame.data
+        if self._image_type in (ImageType.RAW8, ImageType.Y8):
+            data = (data >> 8).astype("uint8")
+        self._pending = data.tobytes()
         self._status = ExposureStatus.SUCCESS
 
     def stop_exposure(self, camera_id: int) -> None:

@@ -49,9 +49,20 @@ _CONTROL_MAP: dict[str, ControlType] = {
     ControlName.COOLER_ON: ControlType.COOLER_ON,
 }
 
+_PREFERRED_FORMATS = (ImageType.RAW16, ImageType.RAW8, ImageType.Y8)
+
 _MICROSECONDS = 1_000_000.0
 _POLL_INTERVAL_S = 0.01
 _READ_TIMEOUT_MARGIN_S = 15.0
+
+
+def _pick_image_type(info: AsiCameraInfo) -> int:
+    """Prefer 16 bit raw frames, falling back to what the camera offers."""
+    supported = set(info.supported_formats)
+    for candidate in _PREFERRED_FORMATS:
+        if candidate in supported:
+            return int(candidate)
+    return int(ImageType.RAW16)
 
 
 class AsiCamera:
@@ -62,11 +73,11 @@ class AsiCamera:
         sdk: AsiSdk,
         info: AsiCameraInfo,
         *,
-        image_type: int = ImageType.RAW16,
+        image_type: int | None = None,
     ) -> None:
         self._sdk = sdk
         self._native = info
-        self._image_type = image_type
+        self._image_type = image_type if image_type is not None else _pick_image_type(info)
         self._open = False
         self._sequence = 0
         self._controls: dict[str, ControlRange] = {}
@@ -76,7 +87,7 @@ class AsiCamera:
             camera_id=str(info.camera_id),
             max_width=info.max_width,
             max_height=info.max_height,
-            bit_depth=info.bit_depth,
+            bit_depth=info.bit_depth if self._image_type == ImageType.RAW16 else 8,
             is_color=info.is_color,
             bayer_pattern=_BAYER.get(info.bayer_pattern, BayerPattern.RGGB)
             if info.is_color

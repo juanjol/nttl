@@ -144,3 +144,26 @@ def test_close_releases_the_camera():
     cam.close()
     assert cam.is_open is False
     assert "close" in sdk.calls
+
+
+def test_raw16_is_preferred_when_supported():
+    from nttl.hal.asi._bindings import ImageType
+
+    sdk = FakeAsiSdk(formats=(ImageType.RAW8, ImageType.RAW16))
+    cam = AsiCamera(sdk, sdk.camera_info(0))
+    cam.open()
+    frame = cam.expose(0.01)
+    assert frame.data.dtype == np.uint16
+    assert cam.info.bit_depth == 16
+
+
+def test_falls_back_to_8_bit_when_raw16_is_missing():
+    from nttl.hal.asi._bindings import ImageType
+
+    sdk = FakeAsiSdk(formats=(ImageType.RAW8,))
+    cam = AsiCamera(sdk, sdk.camera_info(0))
+    cam.open()
+    frame = cam.expose(0.01)
+    assert frame.data.dtype == np.uint8
+    assert cam.info.bit_depth == 8
+    assert frame.metadata.bit_depth == 8

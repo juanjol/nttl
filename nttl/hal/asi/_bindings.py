@@ -139,6 +139,7 @@ class AsiCameraInfo:
     is_color: bool
     bayer_pattern: int
     supported_bins: tuple[int, ...]
+    supported_formats: tuple[int, ...]
     pixel_size_um: float
     has_cooler: bool
     bit_depth: int
@@ -225,6 +226,7 @@ class AsiSdk:
         struct = _CameraInfoStruct()
         self._check("ASIGetCameraProperty", self._lib.ASIGetCameraProperty(struct, index))
         bins = tuple(value for value in struct.SupportedBins if value > 0)
+        formats = tuple(value for value in struct.SupportedVideoFormat if value >= 0)
         return AsiCameraInfo(
             name=struct.Name.decode(errors="replace").strip(),
             camera_id=int(struct.CameraID),
@@ -233,6 +235,7 @@ class AsiSdk:
             is_color=bool(struct.IsColorCam),
             bayer_pattern=int(struct.BayerPattern),
             supported_bins=bins or (1,),
+            supported_formats=formats or (ImageType.RAW16,),
             pixel_size_um=float(struct.PixelSize),
             has_cooler=bool(struct.IsCoolerCam),
             bit_depth=int(struct.BitDepth) or 16,
