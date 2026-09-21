@@ -13,9 +13,9 @@ htmlcov/
 node_modules/
 web/dist/
 nttl/server/static/
-data/
-sessions/
-darks/
+/data/
+/sessions/
+/darks/
 .claude/
 CLAUDE.md
 .DS_Store
