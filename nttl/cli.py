@@ -52,7 +52,11 @@ def main_callback(
         ),
     ] = False,
 ) -> None:
-    pass
+    # Services, scheduled tasks and windowless builds can start without usable
+    # streams, which breaks anything that writes to them.
+    from nttl.logs import ensure_streams
+
+    ensure_streams()
 
 
 @app.command()
@@ -153,7 +157,7 @@ def tray(
     from nttl.tray import TrayController, run_tray
 
     log_path = ensure_streams() or default_log_path()
-    configure_file_logging(log_path)
+    configure_file_logging(log_path)  # keep a record for a background process
     settings, path = _load(config)
     if backend:
         settings.capture.camera.backend = backend
