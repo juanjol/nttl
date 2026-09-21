@@ -26,7 +26,7 @@ def app_config(tmp_path) -> AppConfig:
     config.capture.use_darks = False
     config.capture.camera.exposure_s = 0.01
     config.capture.output.directory = tmp_path / "sessions"
-    config.capture.output.formats = [ImageFormat.JPEG]
+    config.capture.output.format = ImageFormat.JPEG
     config.darks_directory = tmp_path / "darks"
     config.preview_interval_s = 0.0
     return config

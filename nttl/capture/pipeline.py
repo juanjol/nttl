@@ -57,17 +57,12 @@ def write_outputs(
     metadata: FrameMetadata,
     config: OutputConfig,
 ) -> dict[ImageFormat, Path]:
-    if not config.formats:
-        raise ValueError("no output formats configured")
     stem = Path(stem)
-    written: dict[ImageFormat, Path] = {}
-    for fmt in config.formats:
-        if fmt is ImageFormat.FITS:
-            written[fmt] = write_fits(stem, rendered.raw, metadata)
-        elif fmt is ImageFormat.JPEG:
-            written[fmt] = write_image(stem, rendered.image8, fmt, quality=config.jpeg_quality)
-        else:
-            written[fmt] = write_image(
-                stem, rendered.image16, fmt, compression=config.png_compression
-            )
-    return written
+    fmt = config.format
+    if fmt is ImageFormat.FITS:
+        path = write_fits(stem, rendered.raw, metadata)
+    elif fmt is ImageFormat.JPEG:
+        path = write_image(stem, rendered.image8, fmt, quality=config.jpeg_quality)
+    else:
+        path = write_image(stem, rendered.image16, fmt, compression=config.png_compression)
+    return {fmt: path}

@@ -23,7 +23,7 @@ def config_file(tmp_path) -> str:
                 "exposure_s = 0.01",
                 "[capture.output]",
                 f'directory = "{(tmp_path / "sessions").as_posix()}"',
-                'formats = ["jpeg"]',
+                'format = "jpeg"',
             ]
         ),
         encoding="utf-8",
@@ -172,7 +172,7 @@ def test_backend_override_uses_the_simulated_camera(tmp_path):
                 "exposure_s = 0.01",
                 "[capture.output]",
                 f'directory = "{(tmp_path / "sessions").as_posix()}"',
-                'formats = ["jpeg"]',
+                'format = "jpeg"',
             ]
         ),
         encoding="utf-8",
@@ -216,7 +216,7 @@ def tray_config(tmp_path) -> str:
                 "exposure_s = 0.01",
                 "[capture.output]",
                 f'directory = "{(tmp_path / "sessions").as_posix()}"',
-                'formats = ["jpeg"]',
+                'format = "jpeg"',
                 "[web]",
                 "port = 8788",
             ]

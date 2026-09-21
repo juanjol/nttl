@@ -23,7 +23,7 @@ class AutoExposureConfig(BaseModel):
     target_level: float = Field(default=0.22, gt=0.0, lt=1.0)
     tolerance: float = Field(default=0.03, ge=0.0, lt=0.5)
     min_exposure_s: float = Field(default=0.001, gt=0.0)
-    max_exposure_s: float = Field(default=30.0, gt=0.0)
+    max_exposure_s: float = Field(default=5.0, gt=0.0)
     min_gain: float = Field(default=0.0, ge=0.0)
     max_gain: float = Field(default=400.0, ge=0.0)
     priority: Priority = Priority.EXPOSURE
@@ -44,7 +44,7 @@ class AutoExposureConfig(BaseModel):
 
 class OutputConfig(BaseModel):
     directory: Path = Path("sessions")
-    formats: list[ImageFormat] = Field(default_factory=lambda: [ImageFormat.JPEG])
+    format: ImageFormat = ImageFormat.JPEG
     filename_template: str = "{session}_{seq:05d}"
     debayer: str = "auto"
     stretch: StretchConfig = Field(default_factory=StretchConfig)
@@ -52,12 +52,23 @@ class OutputConfig(BaseModel):
     jpeg_quality: int = Field(default=92, ge=1, le=100)
     png_compression: int = Field(default=3, ge=0, le=9)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_formats(cls, data: object) -> object:
+        """Configurations written before the single format switch carry a list."""
+        if isinstance(data, dict) and "format" not in data:
+            legacy = data.get("formats")
+            if isinstance(legacy, list) and legacy:
+                data = {key: value for key, value in data.items() if key != "formats"}
+                data["format"] = legacy[0]
+        return data
+
 
 class CameraConfig(BaseModel):
     backend: str = "asi"
     camera_id: str | None = None
-    exposure_s: float = Field(default=1.0, gt=0.0)
-    gain: float = Field(default=120.0, ge=0.0)
+    exposure_s: float = Field(default=2.0, gt=0.0)
+    gain: float = Field(default=200.0, ge=0.0)
     offset: float = Field(default=50.0, ge=0.0)
     bin: int = Field(default=1, ge=1, le=8)
     roi: tuple[int, int, int, int] | None = None
@@ -68,15 +79,13 @@ class CameraConfig(BaseModel):
 
 class CaptureConfig(BaseModel):
     session_name: str = "session"
-    interval_s: float = Field(default=0.0, ge=0.0)
+    interval_s: float = Field(default=5.0, ge=0.0)
     frame_count: int | None = Field(default=None, ge=1)
     duration_s: float | None = Field(default=None, gt=0.0)
     use_darks: bool = True
     max_consecutive_errors: int = Field(default=5, ge=1)
     camera: CameraConfig = Field(default_factory=CameraConfig)
-    auto_exposure: AutoExposureConfig = Field(
-        default_factory=lambda: AutoExposureConfig(enabled=False)
-    )
+    auto_exposure: AutoExposureConfig = Field(default_factory=AutoExposureConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @model_validator(mode="after")

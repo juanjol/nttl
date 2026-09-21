@@ -65,21 +65,17 @@ def test_stats_are_reported():
     assert 0.0 < rendered.stats.normalized_median < 1.0
 
 
-def test_write_outputs_creates_requested_formats(tmp_path):
+@pytest.mark.parametrize("fmt", [ImageFormat.FITS, ImageFormat.PNG, ImageFormat.JPEG])
+def test_write_outputs_creates_the_configured_format(tmp_path, fmt):
     frame = camera(is_color=True).expose(1.0)
-    config = OutputConfig(
-        directory=tmp_path,
-        formats=[ImageFormat.FITS, ImageFormat.PNG, ImageFormat.JPEG],
-    )
+    config = OutputConfig(directory=tmp_path, format=fmt)
     rendered = render_frame(frame, config)
     written = write_outputs(tmp_path / "frame_00001", rendered, frame.metadata, config)
-    assert set(written) == {ImageFormat.FITS, ImageFormat.PNG, ImageFormat.JPEG}
+    assert set(written) == {fmt}
     for path in written.values():
         assert path.exists() and path.stat().st_size > 0
 
 
-def test_write_outputs_rejects_empty_format_list(tmp_path):
-    frame = camera().expose(0.1)
-    config = OutputConfig(directory=tmp_path, formats=[])
-    with pytest.raises(ValueError):
-        write_outputs(tmp_path / "f", render_frame(frame, config), frame.metadata, config)
+def test_a_configuration_with_a_legacy_format_list_still_loads():
+    config = OutputConfig.model_validate({"formats": ["png"]})
+    assert config.format is ImageFormat.PNG

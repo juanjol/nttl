@@ -5,7 +5,7 @@ import pytest
 
 from nttl.capture.autoexposure import AutoExposureConfig
 from nttl.capture.session import CaptureSession, SessionState
-from nttl.config.models import CaptureConfig, OutputConfig
+from nttl.config.models import CameraConfig, CaptureConfig, OutputConfig
 from nttl.hal.errors import ExposureFailedError
 from nttl.hal.simulated import SimulatedCamera
 from nttl.imaging import ImageFormat
@@ -23,7 +23,9 @@ def make_config(tmp_path, **kwargs) -> CaptureConfig:
         frame_count=3,
         interval_s=0.0,
         use_darks=False,
-        output=OutputConfig(directory=tmp_path, formats=[ImageFormat.JPEG]),
+        camera=CameraConfig(exposure_s=1.0, gain=120.0),
+        auto_exposure=AutoExposureConfig(enabled=False),
+        output=OutputConfig(directory=tmp_path, format=ImageFormat.JPEG),
     )
     base.update(kwargs)
     return CaptureConfig(**base)
