@@ -22,6 +22,20 @@ deferred video compilation.
 - The vendor camera SDK already installed (`libASICamera2.so` on Linux, `ASICamera2.dll` on
   Windows). NTTL does not bundle it.
 
+### Camera SDK
+
+NTTL loads the SDK that is already on the system. It looks at `NTTL_ASI_SDK`, `ASI_SDK_LIB` and
+`ZWO_ASI_LIB`, then at the usual install locations. Set one of those variables when the library
+lives somewhere else:
+
+```sh
+export NTTL_ASI_SDK=/opt/zwo/lib/libASICamera2.so
+```
+
+On Linux the camera also needs the vendor udev rule and a large USB buffer, both shipped with the
+ZWO SDK package (`install.sh` in `lib/`). Without them the camera is only visible to root. On
+Windows the ASI driver installer already registers `ASICamera2.dll`.
+
 ## Install
 
 ```sh
@@ -45,6 +59,12 @@ uv sync
 uv run pytest
 uv run ruff check .
 uv run mypy nttl
+```
+
+Tests that need a real camera are marked `hardware` and are skipped by default:
+
+```sh
+uv run pytest -m hardware
 ```
 
 The web interface lives in `web/` and builds into `nttl/server/static`, from where the server

@@ -46,7 +46,7 @@ packages = ["nttl"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = ["hardware: requires a physical camera connected"]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers -m 'not hardware'"
 filterwarnings = [
     "ignore::DeprecationWarning:starlette.*",
     "ignore:Using `httpx` with `starlette.testclient`:UserWarning",
