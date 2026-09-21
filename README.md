@@ -7,10 +7,13 @@ deferred video compilation.
 ## Features
 
 - Live preview with a configuration panel (capture, camera, darks, overlay, output, schedule)
-- Manual or advanced automatic exposure with anti flicker ramping
+- The camera stays untouched until you press "Live preview" or "Start recording"
+- Manual or advanced automatic exposure with anti flicker ramping, also while previewing
 - Dark frame library with automatic matching by exposure, gain, offset, binning and temperature
-- FITS 16-bit, PNG/TIFF 16-bit and JPEG output, automatic or forced debayer
-- Configurable metadata overlay (date, time, exposure, gain, sensor temperature, and more)
+- One output format at a time: FITS 16-bit, PNG/TIFF 16-bit or JPEG, automatic or forced debayer
+- Metadata overlay on by default, with ready made templates and a custom editor (date, time,
+  exposure, gain, sensor temperature, and more)
+- A list of the compiled timelapses, a button that opens the captures folder and a live log view
 - Unattended scheduler based on sun and twilight windows, for allsky setups
 - Deferred video compilation with system ffmpeg, so capture never saturates the machine
 - Single web UI, also embedded in a native desktop window; headless web only mode for Raspberry Pi
@@ -105,6 +108,13 @@ uv run --group build pyinstaller --noconfirm --distpath build/dist --workpath bu
 # Windows only, with Inno Setup installed:
 iscc /DAppVersion=0.1.0b2 packaging\installer\nttl.iss
 ```
+
+## Defaults
+
+Out of the box NTTL captures a frame every 5 seconds with automatic exposure between 1 ms and
+5 seconds, writes a JPEG per frame into `sessions/` and stamps the date, the exposure and the gain
+on every frame. Nothing needs to be configured for a first run, and the camera is only opened when
+you ask for the live preview or start recording.
 
 ## Usage
 
