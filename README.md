@@ -40,6 +40,14 @@ Windows the ASI driver installer already registers `ASICamera2.dll`.
 
 ```sh
 uv tool install nttl          # or: pipx install nttl
+uv tool install 'nttl[desktop]'   # adds the native desktop window
+```
+
+Building a release from a checkout needs the web interface bundled first:
+
+```sh
+npm --prefix web ci && npm --prefix web run build
+uv build
 ```
 
 ## Usage

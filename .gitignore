@@ -20,3 +20,4 @@ nttl/server/static/
 CLAUDE.md
 .DS_Store
 *.tsbuildinfo
+/dist/
